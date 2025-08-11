@@ -557,13 +557,14 @@ class DeviceForm(TenancyForm, CustomFieldModelForm):
     class Meta:
         model = Device
         fields = [
-            'name', 'device_role', 'device_type', 'serial', 'asset_tag', 'region', 'site_group', 'site', 'rack',
+            'name', 'device_role', 'device_type', 'serial', 'serial_number', 'asset_tag', 'region', 'site_group', 'site', 'rack',
             'location', 'position', 'face', 'status', 'airflow', 'platform', 'primary_ip4', 'primary_ip6',
             'cluster_group', 'cluster', 'tenant_group', 'tenant', 'comments', 'tags', 'local_context_data'
         ]
         help_texts = {
             'device_role': "The function this device serves",
             'serial': "Chassis serial number",
+            'serial_number': "Serial number to test",
             'local_context_data': "Local config context data overwrites all source contexts in the final rendered "
                                   "config context",
         }

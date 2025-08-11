@@ -63,7 +63,7 @@ _patterns = [
     path('api/wireless/', include('wireless.api.urls')),
     path('api/status/', StatusView.as_view(), name='api-status'),
     path('api/docs/', schema_view.with_ui('swagger', cache_timeout=86400), name='api_docs'),
-    path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=86400), name='api_redocs'),
+    path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='api_redocs'),
     re_path(r'^api/swagger(?P<format>.json|.yaml)$', schema_view.without_ui(cache_timeout=86400), name='schema_swagger'),
 
     # GraphQL

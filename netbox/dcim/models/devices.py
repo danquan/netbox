@@ -457,6 +457,11 @@ class Device(PrimaryModel, ConfigContextModel):
         on_delete=models.PROTECT,
         related_name='devices'
     )
+    serial_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Serial number 2',
+    )
     tenant = models.ForeignKey(
         to='tenancy.Tenant',
         on_delete=models.PROTECT,

@@ -378,7 +378,7 @@ class DeviceCSVForm(BaseDeviceCSVForm):
 
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
-            'name', 'device_role', 'tenant', 'manufacturer', 'device_type', 'platform', 'serial', 'asset_tag', 'status',
+            'name', 'device_role', 'tenant', 'manufacturer', 'device_type', 'platform', 'serial', 'serial_number', 'asset_tag', 'status',
             'site', 'location', 'rack', 'position', 'face', 'airflow', 'virtual_chassis', 'vc_position', 'vc_priority',
             'cluster', 'comments',
         ]
@@ -414,7 +414,7 @@ class ChildDeviceCSVForm(BaseDeviceCSVForm):
 
     class Meta(BaseDeviceCSVForm.Meta):
         fields = [
-            'name', 'device_role', 'tenant', 'manufacturer', 'device_type', 'platform', 'serial', 'asset_tag', 'status',
+            'name', 'device_role', 'tenant', 'manufacturer', 'device_type', 'platform', 'serial', 'serial_number', 'asset_tag', 'status',
             'parent', 'device_bay', 'virtual_chassis', 'vc_position', 'vc_priority', 'cluster', 'comments',
         ]
 

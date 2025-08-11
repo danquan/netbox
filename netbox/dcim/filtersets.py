@@ -721,6 +721,9 @@ class DeviceFilterSet(PrimaryModelFilterSet, TenancyFilterSet, LocalConfigContex
     serial = MultiValueCharFilter(
         lookup_expr='iexact'
     )
+    serial_number = MultiValueCharFilter(
+        lookup_expr='iexact'
+    )
     has_primary_ip = django_filters.BooleanFilter(
         method='_has_primary_ip',
         label='Has a primary IP',

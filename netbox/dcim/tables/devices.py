@@ -202,12 +202,12 @@ class DeviceTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = Device
         fields = (
-            'pk', 'id', 'name', 'status', 'tenant', 'device_role', 'manufacturer', 'device_type', 'platform', 'serial',
+            'pk', 'id', 'name', 'serial_number', 'status', 'tenant', 'device_role', 'manufacturer', 'device_type', 'platform', 'serial',
             'asset_tag', 'site', 'location', 'rack', 'position', 'face', 'primary_ip', 'airflow', 'primary_ip4',
             'primary_ip6', 'cluster', 'virtual_chassis', 'vc_position', 'vc_priority', 'comments', 'tags',
         )
         default_columns = (
-            'pk', 'name', 'status', 'tenant', 'site', 'location', 'rack', 'device_role', 'manufacturer', 'device_type',
+            'pk', 'name', 'serial_number', 'status', 'tenant', 'site', 'location', 'rack', 'device_role', 'manufacturer', 'device_type',
             'primary_ip',
         )
 

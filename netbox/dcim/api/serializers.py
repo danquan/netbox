@@ -473,7 +473,7 @@ class DeviceSerializer(PrimaryModelSerializer):
     class Meta:
         model = Device
         fields = [
-            'id', 'url', 'display', 'name', 'device_type', 'device_role', 'tenant', 'platform', 'serial', 'asset_tag',
+            'id', 'url', 'display', 'name', 'device_type', 'device_role', 'tenant', 'platform', 'serial', 'serial_number', 'asset_tag',
             'site', 'location', 'rack', 'position', 'face', 'parent_device', 'status', 'airflow', 'primary_ip',
             'primary_ip4', 'primary_ip6', 'cluster', 'virtual_chassis', 'vc_position', 'vc_priority', 'comments',
             'local_context_data', 'tags', 'custom_fields', 'created', 'last_updated',
@@ -496,7 +496,7 @@ class DeviceWithConfigContextSerializer(DeviceSerializer):
 
     class Meta(DeviceSerializer.Meta):
         fields = [
-            'id', 'url', 'display', 'name', 'device_type', 'device_role', 'tenant', 'platform', 'serial', 'asset_tag',
+            'id', 'url', 'display', 'name', 'device_type', 'device_role', 'tenant', 'platform', 'serial', 'serial_number', 'asset_tag',
             'site', 'location', 'rack', 'position', 'face', 'parent_device', 'status', 'primary_ip', 'primary_ip4',
             'primary_ip6', 'cluster', 'virtual_chassis', 'vc_position', 'vc_priority', 'comments', 'local_context_data',
             'tags', 'custom_fields', 'config_context', 'created', 'last_updated',
