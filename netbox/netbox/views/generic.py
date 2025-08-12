@@ -1,3 +1,5 @@
+import json
+import yaml
 import logging
 import re
 from copy import deepcopy
@@ -14,6 +16,7 @@ from django.utils.html import escape
 from django.utils.http import is_safe_url
 from django.utils.safestring import mark_safe
 from django.views.generic import View
+from django.core.cache import cache
 from django_tables2.export import TableExport
 
 from extras.models import ExportTemplate
@@ -163,20 +166,21 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, 'view')
 
-    def get_table(self, request, permissions):
-        table = self.table(self.queryset, user=request.user)
+    def get_table(self, queryset, request, permissions):
+        # table = self.table(self.queryset, user=request.user)
+        table = self.table(queryset, user=request.user)
         if 'pk' in table.base_columns and (permissions['change'] or permissions['delete']):
             table.columns.show('pk')
 
         return table
 
-    def export_yaml(self):
+    def export_yaml(self, queryset):
         """
         Export the queryset of objects as concatenated YAML documents.
         """
-        yaml_data = [obj.to_yaml() for obj in self.queryset]
-
+        yaml_data = [obj.to_yaml() for obj in queryset]
         return '---\n'.join(yaml_data)
+
 
     def export_table(self, table, columns=None):
         """
@@ -217,8 +221,24 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
-        if self.filterset:
-            self.queryset = self.filterset(request.GET, self.queryset).qs
+        query_hash = hash(str(self.queryset.query))
+        cache_key = f'object_list.{content_type.app_label}.{content_type.model}.{query_hash}.{request.GET.urlencode()}'
+    
+        cached_pks = cache.get(cache_key)
+
+        if cached_pks is not None:
+            print("REQUEST CACHED!!!")
+            # Tạo queryset giả từ list dict để tương thích với một số logic
+            queryset = self.queryset.filter(pk__in=cached_pks)
+        else:
+            print("REQUEST NOT CACHED YET!!!")
+            if self.filterset:
+                self.queryset = self.filterset(request.GET, self.queryset).qs
+            queryset = self.queryset
+            
+            # Serialize dữ liệu thành list dict để cache
+            pks_to_cache = list(queryset.values_list('pk', flat=True))
+            cache.set(cache_key, pks_to_cache, timeout=300)
 
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = {}
@@ -226,11 +246,13 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             perm_name = get_permission_for_model(model, action)
             permissions[action] = request.user.has_perm(perm_name)
 
+        table = self.get_table(queryset, request, permissions)
+
         if 'export' in request.GET:
 
             # Export the current table view
             if request.GET['export'] == 'table':
-                table = self.get_table(request, permissions)
+                # table = self.get_table(request, permissions)
                 columns = [name for name, _ in table.selected_columns]
                 return self.export_table(table, columns)
 
@@ -241,18 +263,17 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             # Check for YAML export support on the model
             elif hasattr(model, 'to_yaml'):
-                response = HttpResponse(self.export_yaml(), content_type='text/yaml')
+                response = HttpResponse(self.export_yaml(queryset), content_type='text/yaml')
                 filename = 'netbox_{}.yaml'.format(self.queryset.model._meta.verbose_name_plural)
                 response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
                 return response
 
             # Fall back to default table/YAML export
             else:
-                table = self.get_table(request, permissions)
+                # table = self.get_table(request, permissions)
                 return self.export_table(table)
 
         # Render the objects table
-        table = self.get_table(request, permissions)
         paginate_table(table, request)
 
         # If this is an HTMX request, return only the rendered table HTML
