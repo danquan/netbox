@@ -34,6 +34,35 @@ class EnhancedPaginator(Paginator):
             return sorted([*self.default_page_lengths, self.per_page])
         return self.default_page_lengths
 
+class CachedEnhancedPaginator(EnhancedPaginator):
+    """
+    A paginator that caches the results of the pagination.
+    This is useful for large datasets where pagination can be expensive.
+    """
+
+    def __init__(self, object_list, per_page, count, **kwargs):
+        # Lưu lại tổng số lượng thực tế từ cache
+        self._cached_count = count
+        # Khởi tạo Paginator cha với danh sách đối tượng của trang hiện tại
+        super().__init__(object_list, per_page, **kwargs)
+
+    @property
+    def count(self):
+        # Luôn trả về tổng số lượng thực tế, thay vì tính toán từ object_list
+        return self._cached_count
+
+    def _get_page(self, *args, **kwargs):
+        """
+        Ghi đè phương thức gốc để trả về một đối tượng Page.
+
+        Điểm mấu chốt là chúng ta BỎ QUA danh sách đã bị cắt lát (và giờ đang rỗng)
+        được truyền từ phương thức `page()` của lớp cha, và thay vào đó, chúng ta sử dụng
+        `self.object_list` gốc mà Paginator này được khởi tạo, bởi vì danh sách đó
+        CHÍNH LÀ nội dung của trang mà chúng ta muốn.
+        """
+        # args[0] là object_list (đang bị rỗng), args[1] là số trang, args[2] là chính paginator.
+        # Chúng ta thay thế object_list rỗng bằng self.object_list gốc của chúng ta.
+        return super()._get_page(self.object_list, args[1], args[2])
 
 class EnhancedPage(Page):
 

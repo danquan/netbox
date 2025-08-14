@@ -28,7 +28,7 @@ from utilities.forms import (
 )
 from utilities.htmx import is_htmx
 from utilities.permissions import get_permission_for_model
-from utilities.tables import paginate_table
+from utilities.tables import paginate_table, paginate_table_with_cache
 from utilities.utils import normalize_querydict, prepare_cloned_fields
 from utilities.views import GetReturnURLMixin, ObjectPermissionRequiredMixin
 
@@ -221,24 +221,9 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
         model = self.queryset.model
         content_type = ContentType.objects.get_for_model(model)
 
-        query_hash = hash(str(self.queryset.query))
-        cache_key = f'object_list.{content_type.app_label}.{content_type.model}.{query_hash}.{request.GET.urlencode()}'
-    
-        cached_pks = cache.get(cache_key)
-
-        if cached_pks is not None:
-            print("REQUEST CACHED!!!")
-            # Tạo queryset giả từ list dict để tương thích với một số logic
-            queryset = self.queryset.filter(pk__in=cached_pks)
-        else:
-            print("REQUEST NOT CACHED YET!!!")
-            if self.filterset:
-                self.queryset = self.filterset(request.GET, self.queryset).qs
-            queryset = self.queryset
-            
-            # Serialize dữ liệu thành list dict để cache
-            pks_to_cache = list(queryset.values_list('pk', flat=True))
-            cache.set(cache_key, pks_to_cache, timeout=300)
+        # Apply the request's query parameters to the queryset
+        if self.filterset:
+            self.queryset = self.filterset(request.GET, self.queryset).qs
 
         # Compile a dictionary indicating which permissions are available to the current user for this model
         permissions = {}
@@ -246,13 +231,11 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
             perm_name = get_permission_for_model(model, action)
             permissions[action] = request.user.has_perm(perm_name)
 
-        table = self.get_table(queryset, request, permissions)
-
         if 'export' in request.GET:
 
             # Export the current table view
             if request.GET['export'] == 'table':
-                # table = self.get_table(request, permissions)
+                table = self.get_table(self.queryset, request, permissions)
                 columns = [name for name, _ in table.selected_columns]
                 return self.export_table(table, columns)
 
@@ -270,11 +253,44 @@ class ObjectListView(ObjectPermissionRequiredMixin, View):
 
             # Fall back to default table/YAML export
             else:
-                # table = self.get_table(request, permissions)
+                table = self.get_table(self.queryset, request, permissions)
                 return self.export_table(table)
 
-        # Render the objects table
-        paginate_table(table, request)
+        # Build the cache key
+        query_hash = hash(str(self.queryset.query))
+        cache_key = f'object_list.{content_type.app_label}.{content_type.model}.{query_hash}.{request.GET.urlencode()}'
+
+        # Check for cached data
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            print("REQUEST CACHED!!!")
+            cached_count, cached_pks = cached_data
+            # Tạo queryset giả từ list dict để tương thích với một số logic
+            queryset = self.queryset.filter(pk__in=cached_pks)
+            table = self.get_table(queryset, request, permissions)
+            paginate_table_with_cache(table, request, cached_count)
+            print("NUMBER OF OBJECTS CACHED:", len(table.page.object_list))
+        else:
+            print("REQUEST NOT CACHED YET!!!")
+            count = self.queryset.count()
+            # Retrieve the full table
+            table = self.get_table(self.queryset, request, permissions)
+            paginate_table(table, request)
+
+            # Cache the PKs of the objects on the current page
+            if table.page:
+                pks_to_cache = [obj.record.pk for obj in table.page.object_list]
+                data_to_cache = (count, pks_to_cache)
+                print("NUMBER OF OBJECTS TO CACHE: ", len(pks_to_cache))
+                cache.set(cache_key, data_to_cache, timeout=300)
+
+        print("NUMBER OF OBJECTS IN TABLE:", len(table.page.object_list))
+        print("TYPE OF OBJECT_LIST:", type(table.page.object_list) if table.page.object_list else None)
+        print("TYPE OF OBJECTS IN TABLE:", type(table.page.object_list[0]) if table.page.object_list else None)
+        for row in table.page.object_list:
+            for column, cell in row.items():
+                print(f"{column}: {cell}")
+            break            
 
         # If this is an HTMX request, return only the rendered table HTML
         if is_htmx(request):

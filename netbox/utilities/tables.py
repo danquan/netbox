@@ -14,7 +14,7 @@ from django_tables2.utils import Accessor
 from extras.choices import CustomFieldTypeChoices
 from extras.models import CustomField
 from .utils import content_type_identifier, content_type_name
-from .paginator import EnhancedPaginator, get_paginate_count
+from .paginator import EnhancedPaginator, CachedEnhancedPaginator, get_paginate_count
 
 
 class BaseTable(tables.Table):
@@ -492,7 +492,27 @@ def paginate_table(table, request):
     }
     RequestConfig(request, paginate).configure(table)
 
+def paginate_table_with_cache(table, request, count):
+    """
+    Paginate a table using a pre-calculated object list.
+    """
+    per_page = get_paginate_count(request)
 
+    # Get the list of objects that have been CACHED
+    object_list = list(table.data.data)
+
+    ### There must be at least 1 element in object_list; you can pass [1] or object_list itself.
+    paginate = {
+        'paginator_class': lambda *args, **kwargs: CachedEnhancedPaginator(object_list, per_page, count),
+        'per_page': per_page
+    }
+
+    RequestConfig(request, paginate).configure(table)
+
+    # Override the object_list of table.page to use the paginated list
+    if hasattr(table, 'page') and table.page:
+        table.page.object_list = table.rows
+        
 #
 # Callables
 #
